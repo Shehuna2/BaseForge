@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { verifyQuickAuthFromRequest } from "@/lib/auth/verifyQuickAuth";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type ProjectRow = {
   id: string;
@@ -20,6 +20,7 @@ const jsonError = (error: string, status: number) => NextResponse.json({ error }
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const auth = await verifyQuickAuthFromRequest(request);
+    const supabaseAdmin = getSupabaseAdmin();
     const body = (await request.json()) as {
       name?: string;
       config_json?: Record<string, unknown>;

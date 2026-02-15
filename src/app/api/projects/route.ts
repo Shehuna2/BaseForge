@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { verifyQuickAuthFromRequest } from "@/lib/auth/verifyQuickAuth";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isValidSlug, isValidWallet, normalizeWallet } from "@/lib/utils/slug";
 
 type ProjectRow = {
@@ -21,6 +21,7 @@ const jsonError = (error: string, status: number) => NextResponse.json({ error }
 export async function POST(request: NextRequest) {
   try {
     const auth = await verifyQuickAuthFromRequest(request);
+    const supabaseAdmin = getSupabaseAdmin();
     const body = (await request.json()) as {
       name?: string;
       project_slug?: string;
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const auth = await verifyQuickAuthFromRequest(request);
+    const supabaseAdmin = getSupabaseAdmin();
     const wallet = normalizeWallet(request.nextUrl.searchParams.get("wallet") ?? "");
 
     if (!isValidWallet(wallet)) {

@@ -1,4 +1,4 @@
-import { verifyJwt } from "@farcaster/quick-auth";
+import { createClient } from "@farcaster/quick-auth";
 import { NextRequest } from "next/server";
 
 import { isValidWallet, normalizeWallet } from "@/lib/utils/slug";
@@ -9,6 +9,10 @@ type QuickAuthClaims = {
   wallet_address?: string;
   address?: string;
   aud?: string;
+};
+
+type QuickAuthVerifier = {
+  verifyJwt: (args: { token: string; domain: string }) => Promise<QuickAuthClaims>;
 };
 
 export type AuthContext = {
@@ -24,6 +28,7 @@ const unauthorized = (message: string): never => {
 
 export const verifyQuickAuthFromRequest = async (request: NextRequest): Promise<AuthContext> => {
   const authHeader = request.headers.get("authorization");
+
   if (!authHeader?.startsWith("Bearer ")) {
     unauthorized("Missing bearer token");
   }
@@ -35,33 +40,34 @@ export const verifyQuickAuthFromRequest = async (request: NextRequest): Promise<
 
   const domain = process.env.QUICK_AUTH_DOMAIN;
   if (!domain) {
-    throw new Error("Missing QUICK_AUTH_DOMAIN");
+    unauthorized("Unauthorized");
   }
+
+  const quickAuthClient = createClient() as QuickAuthVerifier;
 
   let claims: QuickAuthClaims | null = null;
   try {
-    claims = (await verifyJwt({ token, domain })) as QuickAuthClaims;
+    claims = await quickAuthClient.verifyJwt({ token, domain });
   } catch {
-    unauthorized("Invalid token");
+    unauthorized("Unauthorized");
   }
 
-  if (claims === null || claims.aud !== domain) {
-    unauthorized("Invalid token audience");
+  if (!claims || (claims.aud && claims.aud !== domain)) {
+    unauthorized("Unauthorized");
   }
 
   const fid = typeof claims.fid === "number" ? claims.fid : Number(claims.sub);
-  const wallet = normalizeWallet(String(claims.wallet_address ?? claims.address ?? ""));
-
   if (!Number.isInteger(fid) || fid <= 0) {
-    unauthorized("Invalid token claims");
+    unauthorized("Unauthorized");
   }
 
+  const wallet = normalizeWallet(String(claims.wallet_address ?? claims.address ?? ""));
   if (!isValidWallet(wallet)) {
-    unauthorized("Invalid token wallet");
+    unauthorized("Unauthorized");
   }
 
   return {
-    wallet,
-    fid
+    fid,
+    wallet
   };
 };
