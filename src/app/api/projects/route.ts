@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { verifyQuickAuthFromRequest } from "@/lib/auth/verifyQuickAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { isValidSlug, normalizeWallet } from "@/lib/utils/slug";
+import { isValidSlug, isValidWallet, normalizeWallet } from "@/lib/utils/slug";
 
 type ProjectRow = {
   id: string;
@@ -22,16 +22,10 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await verifyQuickAuthFromRequest(request);
     const body = (await request.json()) as {
-      wallet?: string;
       name?: string;
       project_slug?: string;
       plan_id?: "basic" | "pro";
     };
-
-    const wallet = normalizeWallet(body.wallet ?? "");
-    if (!wallet || wallet !== auth.wallet) {
-      return jsonError("Wallet mismatch", 401);
-    }
 
     const name = body.name?.trim();
     const slug = body.project_slug?.trim();
@@ -45,9 +39,13 @@ export async function POST(request: NextRequest) {
       return jsonError("Invalid slug", 400);
     }
 
+    if (planId !== "basic" && planId !== "pro") {
+      return jsonError("Invalid plan_id", 400);
+    }
+
     const { error: userError } = await supabaseAdmin
       .from("users")
-      .upsert({ wallet_address: wallet }, { onConflict: "wallet_address" });
+      .upsert({ wallet_address: auth.wallet }, { onConflict: "wallet_address" });
 
     if (userError) {
       return jsonError(userError.message, 500);
@@ -56,7 +54,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from("projects")
       .insert({
-        owner_wallet: wallet,
+        owner_wallet: auth.wallet,
         name,
         project_slug: slug,
         plan_id: planId,
@@ -82,7 +80,11 @@ export async function GET(request: NextRequest) {
     const auth = await verifyQuickAuthFromRequest(request);
     const wallet = normalizeWallet(request.nextUrl.searchParams.get("wallet") ?? "");
 
-    if (!wallet || wallet !== auth.wallet) {
+    if (!isValidWallet(wallet)) {
+      return jsonError("Invalid wallet", 400);
+    }
+
+    if (wallet !== auth.wallet) {
       return jsonError("Wallet mismatch", 401);
     }
 

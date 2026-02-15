@@ -31,7 +31,6 @@ export default function NewProjectPage() {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        wallet,
         name,
         project_slug: slug,
         plan_id: planId

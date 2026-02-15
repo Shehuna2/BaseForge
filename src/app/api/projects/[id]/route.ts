@@ -41,6 +41,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return jsonError("Forbidden", 401);
     }
 
+    if (project.status !== "draft") {
+      return jsonError("Only draft projects can be edited", 400);
+    }
+
     if (body.status && body.status !== "draft") {
       return jsonError("Status must remain draft", 400);
     }
@@ -68,6 +72,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       })
       .eq("id", params.id)
       .eq("owner_wallet", auth.wallet)
+      .eq("status", "draft")
       .select("*")
       .single<ProjectRow>();
 

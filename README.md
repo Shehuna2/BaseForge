@@ -47,10 +47,11 @@ Open `http://localhost:3000` and go to `/dashboard`.
   - requests without bearer token fail with `{ "error": "..." }`
   - wallet mismatch fails
   - invalid slug fails
+  - invalid wallet format fails (`0x` + 40 lowercase hex chars)
 
 ## Notes
 
-- All wallet addresses are normalized to lowercase.
+- All wallet addresses are normalized to lowercase and validated as `0x` + 40 lowercase hex chars.
 - Server APIs verify Farcaster JWT before reads/writes.
 - No runtime renderer or payment logic is included in Phase 0.
 - Canonical future runtime path remains `/app/:wallet/:projectSlug`.

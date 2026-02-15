@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 
-import { normalizeWallet } from "@/lib/utils/slug";
+import { isValidWallet, normalizeWallet } from "@/lib/utils/slug";
 
 type AuthState = {
   isLoading: boolean;
@@ -37,7 +37,9 @@ export const useAuth = () => {
       const wallet = context.user?.verifiedAddresses?.ethAddresses?.[0];
       const fid = context.user?.fid ?? null;
 
-      if (!token || !wallet || !fid) {
+      const normalizedWallet = normalizeWallet(wallet ?? "");
+
+      if (!token || !fid || !isValidWallet(normalizedWallet)) {
         setState({ ...initialState, isLoading: false, error: "Unable to authenticate via Farcaster." });
         return;
       }
@@ -45,7 +47,7 @@ export const useAuth = () => {
       setState({
         isLoading: false,
         token,
-        wallet: normalizeWallet(wallet),
+        wallet: normalizedWallet,
         fid,
         error: null
       });

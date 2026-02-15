@@ -1,7 +1,7 @@
 import { verifyJwt } from "@farcaster/quick-auth";
 import { NextRequest } from "next/server";
 
-import { normalizeWallet } from "@/lib/utils/slug";
+import { isValidWallet, normalizeWallet } from "@/lib/utils/slug";
 
 type QuickAuthClaims = {
   sub?: string;
@@ -29,27 +29,39 @@ export const verifyQuickAuthFromRequest = async (request: NextRequest): Promise<
   }
 
   const token = authHeader.slice("Bearer ".length).trim();
-  const domain = process.env.QUICK_AUTH_DOMAIN;
+  if (!token) {
+    unauthorized("Missing bearer token");
+  }
 
+  const domain = process.env.QUICK_AUTH_DOMAIN;
   if (!domain) {
     throw new Error("Missing QUICK_AUTH_DOMAIN");
   }
 
-  const claims = (await verifyJwt({ token, domain })) as QuickAuthClaims;
+  let claims: QuickAuthClaims | null = null;
+  try {
+    claims = (await verifyJwt({ token, domain })) as QuickAuthClaims;
+  } catch {
+    unauthorized("Invalid token");
+  }
 
-  if (!claims || claims.aud !== domain) {
+  if (claims === null || claims.aud !== domain) {
     unauthorized("Invalid token audience");
   }
 
   const fid = typeof claims.fid === "number" ? claims.fid : Number(claims.sub);
-  const walletRaw = claims.wallet_address ?? claims.address;
+  const wallet = normalizeWallet(String(claims.wallet_address ?? claims.address ?? ""));
 
-  if (!walletRaw || Number.isNaN(fid)) {
+  if (!Number.isInteger(fid) || fid <= 0) {
     unauthorized("Invalid token claims");
   }
 
+  if (!isValidWallet(wallet)) {
+    unauthorized("Invalid token wallet");
+  }
+
   return {
-    wallet: normalizeWallet(String(walletRaw)),
+    wallet,
     fid
   };
 };
