@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { useAuth } from "@/hooks/useAuth";
+import { BASE_APP_AUTH_MESSAGE, useAuth } from "@/hooks/useAuth";
 
 type Project = {
   id: string;
@@ -24,7 +24,10 @@ export default function DashboardClient() {
 
   useEffect(() => {
     const loadProjects = async () => {
-      if (!token || !wallet) return;
+      if (!token || !wallet) {
+        return;
+      }
+
       const response = await fetch(`/api/projects?wallet=${wallet}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -47,7 +50,21 @@ export default function DashboardClient() {
   }
 
   if (error || !wallet || !fid || !token) {
-    return <p className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-rose-200">{error ?? "Unauthorized"}</p>;
+    const friendlyMessage = error ?? BASE_APP_AUTH_MESSAGE;
+
+    return (
+      <div className="space-y-4 rounded-md border border-rose-500/40 bg-rose-500/10 p-4 text-rose-200">
+        <p>{friendlyMessage}</p>
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="cursor-not-allowed rounded-md bg-slate-700 px-3 py-2 text-sm font-medium text-slate-300 opacity-60"
+        >
+          New Draft Project
+        </button>
+      </div>
+    );
   }
 
   return (
